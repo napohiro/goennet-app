@@ -1,0 +1,31 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-stone-50 text-stone-900 antialiased;
+    font-family: 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', 'Hiragino Sans',
+      'BIZ UDPGothic', 'Meiryo', system-ui, sans-serif;
+  }
+
+  input[type='text'],
+  input[type='email'],
+  input[type='url'],
+  input[type='tel'],
+  textarea,
+  select {
+    @apply text-base;
+  }
+}
+
+@layer utilities {
+  .safe-area-pb {
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+}
