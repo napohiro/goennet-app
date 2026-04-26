@@ -10,6 +10,7 @@ export function useMyProfile() {
 
   const fetchProfile = useCallback(async () => {
     if (!user) { setLoading(false); return }
+    console.log('[Goen Net] fetchProfile: auth_user_id =', user.id)
     setLoading(true)
     try {
       const data = await getMyProfile(user.id)

@@ -1,7 +1,9 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
 
 const AuthContext = createContext(null)
+
+const DEV_UUID_KEY = 'goennet_test_user_uuid'
 
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(undefined)
@@ -10,6 +12,9 @@ export function AuthProvider({ children }) {
   // DEV モード、または VITE_ENABLE_TEST_LOGIN=true のとき有効。Supabase Auth を使わずローカル状態でログイン扱い。
   const isTestLoginEnabled = import.meta.env.DEV || import.meta.env.VITE_ENABLE_TEST_LOGIN === 'true'
 
+  // devLogin 中は Supabase の INITIAL_SESSION(null) でセッションを上書きしないためのフラグ
+  const devModeActive = useRef(false)
+
   useEffect(() => {
     if (!isSupabaseConfigured) {
       setSession(null)
@@ -17,11 +22,21 @@ export function AuthProvider({ children }) {
       return
     }
 
+    // onAuthStateChange を getSession より先に登録し、INITIAL_SESSION を確実に先行処理させる
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      // devLogin 中に Supabase から null が来ても上書きしない（race condition 対策）
+      if (devModeActive.current && newSession === null) return
+      devModeActive.current = false
+      setSession(newSession)
+    })
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session && isTestLoginEnabled) {
-        // アプリ再起動時にdevLoginセッションをlocalStorageから復元する
-        const uuid = localStorage.getItem('goennet_test_user_uuid')
+        // アプリ再起動時: localStorage の UUID からdevセッションを復元する
+        const uuid = localStorage.getItem(DEV_UUID_KEY)
         if (uuid) {
+          console.log('[Goen Net] devLogin 復元: auth_user_id =', uuid)
+          devModeActive.current = true
           setSession({ user: { id: uuid, email: 'dev@goennet.local' } })
           setLoading(false)
           return
@@ -31,22 +46,19 @@ export function AuthProvider({ children }) {
       setLoading(false)
     })
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session)
-    })
-
     return () => subscription.unsubscribe()
   }, [isTestLoginEnabled])
 
   const devLogin = isTestLoginEnabled
     ? () => {
-        // localStorage に永続化した UUID を使う（セッションをまたいで同じ auth_user_id になる）
-        const LS_KEY = 'goennet_test_user_uuid'
-        let uuid = localStorage.getItem(LS_KEY)
+        // localStorage に永続化した UUID を使う（初回のみ生成・以後は同じ値を再利用）
+        let uuid = localStorage.getItem(DEV_UUID_KEY)
         if (!uuid) {
           uuid = crypto.randomUUID()
-          localStorage.setItem(LS_KEY, uuid)
+          localStorage.setItem(DEV_UUID_KEY, uuid)
         }
+        console.log('[Goen Net] devLogin: auth_user_id =', uuid)
+        devModeActive.current = true
         setSession({ user: { id: uuid, email: 'dev@goennet.local' } })
       }
     : undefined
