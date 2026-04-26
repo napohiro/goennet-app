@@ -114,6 +114,32 @@ export async function getDirectConnections(profileId) {
   }))
 }
 
+// QR経由でつながり申請を承認フローなしで goennet_direct_connections に直接作成する
+// profile_a_id < profile_b_id の昇順ソートで unique 制約の重複を防ぐ
+export async function createDirectConnection(myProfileId, ownerProfileId) {
+  const { data: existing } = await supabase
+    .from('goennet_direct_connections')
+    .select('id')
+    .or(`and(profile_a_id.eq.${myProfileId},profile_b_id.eq.${ownerProfileId}),and(profile_a_id.eq.${ownerProfileId},profile_b_id.eq.${myProfileId})`)
+    .eq('is_active', true)
+    .maybeSingle()
+  if (existing) throw new Error('既につながっています')
+
+  const [profileAId, profileBId] = [myProfileId, ownerProfileId].sort()
+  const { data, error } = await supabase
+    .from('goennet_direct_connections')
+    .insert({
+      profile_a_id: profileAId,
+      profile_b_id: profileBId,
+      source_type: 'qr',
+      is_active: true,
+    })
+    .select()
+    .single()
+  if (error) throwSupabaseError('createDirectConnection', error)
+  return data
+}
+
 export async function checkMutualConnection(myProfileId, otherProfileId) {
   const { data, error } = await supabase
     .from('goennet_direct_connections')

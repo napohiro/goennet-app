@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { getInviteByToken } from '../../services/qrService'
-import { sendConnectionRequest, checkMutualConnection, checkPendingRequest } from '../../services/connectionService'
+import { createDirectConnection, checkMutualConnection } from '../../services/connectionService'
 import { useMyProfile } from '../../hooks/useProfile'
 import { useAuth } from '../../hooks/useAuth'
 import Badge from '../../components/common/Badge'
@@ -17,11 +17,10 @@ export default function InvitePage() {
 
   const [invite, setInvite] = useState(null)
   const [mutual, setMutual] = useState(false)
-  const [pending, setPending] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [message, setMessage] = useState('')
   const [sending, setSending] = useState(false)
   const [sent, setSent] = useState(false)
+  const [sendError, setSendError] = useState(null)
   const [notFound, setNotFound] = useState(false)
 
   useEffect(() => {
@@ -32,12 +31,8 @@ export default function InvitePage() {
         if (!data || !data.is_active) { setNotFound(true); return }
         setInvite(data)
         if (myProfile && data.owner) {
-          const [m, p] = await Promise.all([
-            checkMutualConnection(myProfile.id, data.owner.id),
-            checkPendingRequest(myProfile.id, data.owner.id),
-          ])
+          const m = await checkMutualConnection(myProfile.id, data.owner.id)
           setMutual(m)
-          setPending(p)
         }
       })
       .catch(() => setNotFound(true))
@@ -56,11 +51,12 @@ export default function InvitePage() {
       return
     }
     setSending(true)
+    setSendError(null)
     try {
-      await sendConnectionRequest(myProfile.id, invite.owner.id, message, 'qr')
+      await createDirectConnection(myProfile.id, invite.owner.id)
       setSent(true)
     } catch (e) {
-      alert(e.message)
+      setSendError(e.message)
     } finally {
       setSending(false)
     }
@@ -132,39 +128,25 @@ export default function InvitePage() {
         ) : sent ? (
           <div className="bg-goen-green-50 border border-goen-green-200 rounded-2xl p-6 text-center">
             <div className="text-4xl mb-2">🌿</div>
-            <p className="font-bold text-goen-green-800 text-lg mb-1">申請を送りました</p>
-            <p className="text-stone-500 text-sm">{owner.display_name} さんの承認をお待ちください。</p>
-            <button onClick={() => navigate('/')} className="mt-4 text-goen-green-700 text-sm font-medium underline">
-              トップへ戻る
+            <p className="font-bold text-goen-green-800 text-lg mb-1">つながりました！</p>
+            <p className="text-stone-500 text-sm">{owner.display_name} さんと直接つながりました。</p>
+            <button onClick={() => navigate('/profile/me')} className="mt-4 text-goen-green-700 text-sm font-medium underline">
+              マイページへ戻る
             </button>
           </div>
         ) : mutual ? (
           <div className="bg-goen-green-50 border border-goen-green-200 rounded-2xl p-4 text-center text-goen-green-700 font-medium">
             すでに直接つながっています
           </div>
-        ) : pending ? (
-          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-center text-amber-700 font-medium">
-            申請中です。承認をお待ちください。
-          </div>
         ) : (
           <div className="bg-white rounded-2xl shadow-sm border border-stone-100 p-5">
-            <h3 className="font-bold text-stone-800 mb-1">つながり申請を送る</h3>
+            <h3 className="font-bold text-stone-800 mb-1">{owner.display_name} さんに申請する</h3>
             <p className="text-stone-500 text-xs mb-4">
-              QRを読み込んでもすぐにはつながりません。<br />
-              申請を送り、{owner.display_name} さんに承認してもらうとつながりが生まれます。
+              ボタンを押すと {owner.display_name} さんと直接つながります。
             </p>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-stone-700 mb-1">
-                申請メッセージ（任意）
-              </label>
-              <textarea
-                rows={3}
-                value={message}
-                onChange={e => setMessage(e.target.value)}
-                placeholder="ご縁のきっかけや自己紹介を一言添えると承認されやすいです。"
-                className="w-full rounded-xl border-stone-300 text-sm"
-              />
-            </div>
+            {sendError && (
+              <p className="text-red-600 text-sm bg-red-50 rounded-lg p-3 mb-3">{sendError}</p>
+            )}
             <Button
               variant="primary"
               fullWidth
@@ -172,7 +154,7 @@ export default function InvitePage() {
               onClick={handleRequest}
               loading={sending || (isAuthenticated && profileLoading)}
             >
-              {isAuthenticated ? 'つながり申請を送る' : 'ログインして申請する'}
+              {isAuthenticated ? '申請する' : 'ログインして申請する'}
             </Button>
           </div>
         )}
