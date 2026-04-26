@@ -6,13 +6,17 @@ function generateToken() {
 }
 
 export async function getOrCreateInviteToken(profileId) {
-  const { data: existing } = await supabase
+  const { data: existing, error: selectErr } = await supabase
     .from('goennet_qr_invites')
     .select('*')
     .eq('owner_profile_id', profileId)
     .eq('is_active', true)
     .maybeSingle()
 
+  if (selectErr) {
+    console.error('[qrService] getOrCreateInviteToken SELECT failed:', selectErr)
+    throw selectErr
+  }
   if (existing) return existing
 
   const token = generateToken()
@@ -26,7 +30,11 @@ export async function getOrCreateInviteToken(profileId) {
     })
     .select()
     .single()
-  if (error) throw error
+  if (error) {
+    console.error('[qrService] getOrCreateInviteToken INSERT failed:', error)
+    throw error
+  }
+  console.log('[qrService] new invite token created:', token, 'for profile:', profileId)
   return data
 }
 
@@ -51,14 +59,37 @@ export async function createTimedInviteToken(profileId, expiresInHours = 24, max
 }
 
 export async function getInviteByToken(token) {
-  const { data, error } = await supabase
+  // Step 1: fetch invite row
+  const { data: invite, error: inviteErr } = await supabase
     .from('goennet_qr_invites')
-    .select('*, owner:goennet_members!owner_profile_id(id, display_name, handle_name, avatar_url, catch_copy, how_i_can_help, useful_for, what_we_can_do, offer_tags, website_url, youtube_url, instagram_url, is_public)')
+    .select('*')
     .eq('invite_token', token)
     .eq('is_active', true)
     .maybeSingle()
-  if (error) throw error
-  return data
+  if (inviteErr) {
+    console.error('[qrService] getInviteByToken SELECT invite failed:', inviteErr)
+    throw inviteErr
+  }
+  if (!invite) {
+    console.warn('[qrService] getInviteByToken: no invite found for token:', token)
+    return null
+  }
+
+  // Step 2: fetch owner profile separately
+  const { data: owner, error: ownerErr } = await supabase
+    .from('goennet_members')
+    .select('id, display_name, handle_name, avatar_url, catch_copy, how_i_can_help, useful_for, what_we_can_do, offer_tags, website_url, youtube_url, instagram_url, is_public')
+    .eq('id', invite.owner_profile_id)
+    .maybeSingle()
+  if (ownerErr) {
+    console.error('[qrService] getInviteByToken SELECT owner failed:', ownerErr)
+    throw ownerErr
+  }
+  if (!owner) {
+    console.warn('[qrService] getInviteByToken: owner profile not found for id:', invite.owner_profile_id)
+  }
+
+  return { ...invite, owner }
 }
 
 export function getInviteUrl(token) {

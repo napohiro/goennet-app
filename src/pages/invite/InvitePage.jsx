@@ -35,7 +35,7 @@ export default function InvitePage() {
           setMutual(m)
         }
       })
-      .catch(() => setNotFound(true))
+      .catch((e) => { console.error('[InvitePage] failed to load invite:', e); setNotFound(true) })
       .finally(() => setLoading(false))
   }, [token, myProfile?.id])
 
