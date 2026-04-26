@@ -34,7 +34,7 @@ export default function InvitePage() {
     console.log('[InvitePage] fetching invite for token:', token)
     getInviteByToken(token)
       .then(async (data) => {
-        if (!data || !data.is_active) { setNotFound(true); return }
+        if (!data || data.is_active === false) { setNotFound(true); return }
         setInvite(data)
         if (myProfile && data.owner) {
           const [m, p] = await Promise.all([

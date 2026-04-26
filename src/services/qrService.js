@@ -10,7 +10,7 @@ export async function getOrCreateInviteToken(profileId) {
     .from('goennet_qr_invites')
     .select('*')
     .eq('owner_profile_id', profileId)
-    .eq('is_active', true)
+    .or('is_active.eq.true,is_active.is.null')
     .maybeSingle()
 
   if (selectErr) {
@@ -64,7 +64,7 @@ export async function getInviteByToken(token) {
     .from('goennet_qr_invites')
     .select('*')
     .eq('invite_token', token)
-    .eq('is_active', true)
+    .or('is_active.eq.true,is_active.is.null')
     .maybeSingle()
   if (inviteErr) {
     console.error('[qrService] getInviteByToken SELECT invite failed:', inviteErr)
