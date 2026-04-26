@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { getInviteByToken } from '../../services/qrService'
-import { createDirectConnection, checkMutualConnection } from '../../services/connectionService'
+import { sendConnectionRequest, checkMutualConnection, checkPendingRequest } from '../../services/connectionService'
 import { useMyProfile } from '../../hooks/useProfile'
 import { useAuth } from '../../hooks/useAuth'
 import Badge from '../../components/common/Badge'
@@ -17,6 +17,7 @@ export default function InvitePage() {
 
   const [invite, setInvite] = useState(null)
   const [mutual, setMutual] = useState(false)
+  const [pending, setPending] = useState(false)
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
   const [sent, setSent] = useState(false)
@@ -31,8 +32,12 @@ export default function InvitePage() {
         if (!data || !data.is_active) { setNotFound(true); return }
         setInvite(data)
         if (myProfile && data.owner) {
-          const m = await checkMutualConnection(myProfile.id, data.owner.id)
+          const [m, p] = await Promise.all([
+            checkMutualConnection(myProfile.id, data.owner.id),
+            checkPendingRequest(myProfile.id, data.owner.id),
+          ])
           setMutual(m)
+          setPending(!!p)
         }
       })
       .catch((e) => { console.error('[InvitePage] failed to load invite:', e); setNotFound(true) })
@@ -53,7 +58,7 @@ export default function InvitePage() {
     setSending(true)
     setSendError(null)
     try {
-      await createDirectConnection(myProfile.id, invite.owner.id)
+      await sendConnectionRequest(myProfile.id, invite.owner.id, '', 'qr')
       setSent(true)
     } catch (e) {
       setSendError(e.message)
@@ -128,8 +133,8 @@ export default function InvitePage() {
         ) : sent ? (
           <div className="bg-goen-green-50 border border-goen-green-200 rounded-2xl p-6 text-center">
             <div className="text-4xl mb-2">🌿</div>
-            <p className="font-bold text-goen-green-800 text-lg mb-1">つながりました！</p>
-            <p className="text-stone-500 text-sm">{owner.display_name} さんと直接つながりました。</p>
+            <p className="font-bold text-goen-green-800 text-lg mb-1">申請を送りました！</p>
+            <p className="text-stone-500 text-sm">{owner.display_name} さんに申請を送りました。承認をお待ちください。</p>
             <button onClick={() => navigate('/profile/me')} className="mt-4 text-goen-green-700 text-sm font-medium underline">
               マイページへ戻る
             </button>
@@ -138,11 +143,15 @@ export default function InvitePage() {
           <div className="bg-goen-green-50 border border-goen-green-200 rounded-2xl p-4 text-center text-goen-green-700 font-medium">
             すでに直接つながっています
           </div>
+        ) : pending ? (
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-center text-amber-700 font-medium">
+            申請済みです。承認をお待ちください。
+          </div>
         ) : (
           <div className="bg-white rounded-2xl shadow-sm border border-stone-100 p-5">
             <h3 className="font-bold text-stone-800 mb-1">{owner.display_name} さんに申請する</h3>
             <p className="text-stone-500 text-xs mb-4">
-              ボタンを押すと {owner.display_name} さんと直接つながります。
+              ボタンを押すと {owner.display_name} さんに申請が届きます。承認されるとつながりが成立します。
             </p>
             {sendError && (
               <p className="text-red-600 text-sm bg-red-50 rounded-lg p-3 mb-3">{sendError}</p>
