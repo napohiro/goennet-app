@@ -62,8 +62,12 @@ Supabase ダッシュボード → **Authentication** → **URL Configuration** 
 
 | 項目 | 値 |
 |---|---|
-| Site URL | `http://localhost:5173` (本番: `https://your-domain.com`) |
+| Site URL | `http://localhost:5173` (本番: `https://goennet-app.vercel.app`) |
 | Redirect URLs | `http://localhost:5173/auth/callback` |
+| Redirect URLs（本番追加） | `https://goennet-app.vercel.app/auth/callback*` ← 末尾に `*`（クエリパラメータを許可） |
+
+> **`*` が必要な理由**: 招待フロー経由のログインでは `/auth/callback?redirect=/invite/:token` のようにクエリパラメータが付きます。  
+> ワイルドカードがないと Magic Link の検証が失敗します。
 
 ### 4. 依存パッケージをインストールする
 
@@ -81,23 +85,52 @@ npm run dev
 
 ---
 
-## Magic Link の戻り先 URL について
+## VITE_APP_URL について（重要）
 
-> **このアプリの Magic Link 戻り先は `VITE_APP_URL` で管理します。**  
-> `signInWithOtp` では `window.location.origin` を直書きせず、  
-> **必ず `src/lib/authConfig.js` の `AUTH_OPTIONS` を使うこと。**
+### QRコードURLの生成フロー
+
+`VITE_APP_URL` は **QRコードURL** と **Magic Link の戻り先** 両方に使われます。
+
+```
+VITE_APP_URL（環境変数）
+  └─ src/lib/authConfig.js  →  APP_URL / AUTH_REDIRECT_URL
+       ├─ src/services/qrService.js  →  `${APP_URL}/invite/${token}`  ← QRコードURL
+       └─ src/hooks/useAuth.js       →  emailRedirectTo               ← Magic Linkの戻り先
+```
+
+**`window.location.origin` や localhost の直書きは禁止。必ず `authConfig.js` 経由で使うこと。**
+
+### 環境別の設定方法
+
+| 環境 | 設定場所 | VITE_APP_URL の値 |
+|---|---|---|
+| ローカル開発 | `.env` | `http://localhost:5173` |
+| Vercel 本番 | **Vercel ダッシュボード** | `https://goennet-app.vercel.app` |
+| ローカル本番ビルド確認 | `.env.production`（gitignore済み） | `https://goennet-app.vercel.app` |
+
+### Vercel 本番デプロイ時の設定手順
+
+1. Vercel ダッシュボード → プロジェクト → **Settings > Environment Variables**
+2. 以下を **Production** 環境に追加：
+
+   | Key | Value |
+   |---|---|
+   | `VITE_SUPABASE_URL` | `https://xxx.supabase.co` |
+   | `VITE_SUPABASE_ANON_KEY` | `your-anon-key` |
+   | `VITE_APP_URL` | `https://goennet-app.vercel.app` |
+
+3. **Redeploy** を実行（環境変数は再デプロイしないと反映されない）
+
+> `.env.production` はローカルで `vite build` の動作確認に使うファイルで、`.gitignore` で除外されています。  
+> Vercel は `.env.production` を読みません。ダッシュボードの設定が優先されます。
+
+### コード上の扱い
 
 ```js
 // src/lib/authConfig.js
 export const APP_URL = import.meta.env.VITE_APP_URL || 'http://localhost:5173'
 export const AUTH_REDIRECT_URL = `${APP_URL}/auth/callback`
-export const AUTH_OPTIONS = { emailRedirectTo: AUTH_REDIRECT_URL }
-```
-
-```js
-// 使用例 (src/hooks/useAuth.js)
-import { AUTH_OPTIONS } from '../lib/authConfig'
-await supabase.auth.signInWithOtp({ email, options: AUTH_OPTIONS })
+// ↑ VITE_APP_URL が未設定でもクラッシュしない（localhost にフォールバック）
 ```
 
 ---
@@ -183,8 +216,9 @@ goennet-app/
 
 ### 本番デプロイ前チェックリスト
 
-- [ ] `.env.production` の `VITE_APP_URL` を本番ドメインに変更
-- [ ] Supabase の Site URL と Redirect URLs を本番ドメインに変更
+- [ ] **Vercel ダッシュボード**の Environment Variables に `VITE_APP_URL=https://goennet-app.vercel.app` を設定（`.env.production` は Vercel に読まれない）
+- [ ] Supabase の Site URL を `https://goennet-app.vercel.app` に変更
+- [ ] Supabase の Redirect URLs に `https://goennet-app.vercel.app/auth/callback*`（末尾 `*` 必須）を追加
 - [ ] RLS が全テーブルで有効になっているか確認
 - [ ] `supabase/rls_policies.sql` のコメントを読み本番向けに強化
 - [ ] `seed.sql` を本番で実行していないことを確認
