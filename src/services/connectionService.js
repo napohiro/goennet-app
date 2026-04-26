@@ -1,11 +1,11 @@
 import { supabase } from '../lib/supabase'
 import { throwSupabaseError } from '../lib/supabaseError'
 
-export async function sendConnectionRequest(requesterId, receiverId, message = '', sourceType = 'manual') {
+export async function sendConnectionRequest(requesterId, ownerId, message = '', sourceType = 'manual', inviteToken = null) {
   const { data: existing } = await supabase
     .from('goennet_connection_requests')
     .select('id, status')
-    .or(`and(requester_profile_id.eq.${requesterId},receiver_profile_id.eq.${receiverId}),and(requester_profile_id.eq.${receiverId},receiver_profile_id.eq.${requesterId})`)
+    .or(`and(requester_profile_id.eq.${requesterId},owner_profile_id.eq.${ownerId}),and(requester_profile_id.eq.${ownerId},owner_profile_id.eq.${requesterId})`)
     .eq('status', 'pending')
     .maybeSingle()
 
@@ -15,9 +15,10 @@ export async function sendConnectionRequest(requesterId, receiverId, message = '
     .from('goennet_connection_requests')
     .insert({
       requester_profile_id: requesterId,
-      receiver_profile_id: receiverId,
+      owner_profile_id: ownerId,
       message,
       source_type: sourceType,
+      invite_token: inviteToken,
       status: 'pending',
     })
     .select()
@@ -30,7 +31,7 @@ export async function getIncomingRequests(profileId) {
   const { data, error } = await supabase
     .from('goennet_connection_requests')
     .select('*, requester:goennet_members!requester_profile_id(id, display_name, handle_name, avatar_url, catch_copy, how_i_can_help)')
-    .eq('receiver_profile_id', profileId)
+    .eq('owner_profile_id', profileId)
     .eq('status', 'pending')
     .order('created_at', { ascending: false })
   if (error) throwSupabaseError('getIncomingRequests', error)
@@ -40,7 +41,7 @@ export async function getIncomingRequests(profileId) {
 export async function getOutgoingRequests(profileId) {
   const { data, error } = await supabase
     .from('goennet_connection_requests')
-    .select('*, receiver:goennet_members!receiver_profile_id(id, display_name, handle_name, avatar_url, catch_copy)')
+    .select('*, owner:goennet_members!owner_profile_id(id, display_name, handle_name, avatar_url, catch_copy)')
     .eq('requester_profile_id', profileId)
     .order('created_at', { ascending: false })
   if (error) throwSupabaseError('getOutgoingRequests', error)
@@ -61,12 +62,12 @@ export async function approveRequest(requestId, myProfileId) {
     .eq('id', requestId)
   if (updateErr) throwSupabaseError('approveRequest/updateStatus', updateErr)
 
-  // profile_a_id = 申請者, profile_b_id = 受信者（承認者）
+  // profile_a_id = 申請者, profile_b_id = QRオーナー（承認者）
   const { data: conn, error: connErr } = await supabase
     .from('goennet_direct_connections')
     .insert({
       profile_a_id: req.requester_profile_id,
-      profile_b_id: req.receiver_profile_id,
+      profile_b_id: req.owner_profile_id,
       source_request_id: requestId,
       source_type: req.source_type,
       is_active: true,
@@ -79,10 +80,10 @@ export async function approveRequest(requestId, myProfileId) {
     .from('goennet_connection_lineage')
     .insert({
       root_profile_id: req.requester_profile_id,
-      target_profile_id: req.receiver_profile_id,
+      target_profile_id: req.owner_profile_id,
       origin_depth: 1,
       current_depth: 1,
-      path_profile_ids: [req.requester_profile_id, req.receiver_profile_id],
+      path_profile_ids: [req.requester_profile_id, req.owner_profile_id],
       path_display_text: '直接つながり',
       promoted_to_direct: true,
       promoted_at: new Date().toISOString(),
@@ -155,7 +156,7 @@ export async function checkPendingRequest(myProfileId, otherProfileId) {
   const { data, error } = await supabase
     .from('goennet_connection_requests')
     .select('id, status')
-    .or(`and(requester_profile_id.eq.${myProfileId},receiver_profile_id.eq.${otherProfileId}),and(requester_profile_id.eq.${otherProfileId},receiver_profile_id.eq.${myProfileId})`)
+    .or(`and(requester_profile_id.eq.${myProfileId},owner_profile_id.eq.${otherProfileId}),and(requester_profile_id.eq.${otherProfileId},owner_profile_id.eq.${myProfileId})`)
     .eq('status', 'pending')
     .maybeSingle()
   if (error) throwSupabaseError('checkPendingRequest', error)

@@ -20,11 +20,14 @@ export default function AuthCallbackPage() {
         if (!session) throw new Error('セッションが見つかりません。ログインリンクをもう一度お試しください。')
 
         const profile = await getMyProfile(session.user.id)
+        const pendingToken = localStorage.getItem('pending_invite_token')
+        const inviteDest = pendingToken ? `/invite/${pendingToken}` : null
         if (profile) {
-          navigate(redirectPath || '/profile/me', { replace: true })
+          navigate(inviteDest || redirectPath || '/profile/me', { replace: true })
         } else {
-          const next = redirectPath
-            ? `/profile/create?redirect=${encodeURIComponent(redirectPath)}`
+          const dest = inviteDest || redirectPath
+          const next = dest
+            ? `/profile/create?redirect=${encodeURIComponent(dest)}`
             : '/profile/create'
           navigate(next, { replace: true })
         }

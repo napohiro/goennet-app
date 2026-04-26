@@ -5,7 +5,7 @@ import { formatDateTime } from '../../utils/formatUtils'
 
 export default function ConnectionRequestCard({ request, type, onApprove, onReject }) {
   const [loading, setLoading] = useState(false)
-  const profile = type === 'incoming' ? request.requester : request.receiver
+  const profile = type === 'incoming' ? request.requester : request.owner
 
   async function handleApprove() {
     setLoading(true)

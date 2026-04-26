@@ -49,19 +49,26 @@ create index if not exists idx_goennet_members_handle_name on goennet_members(ha
 create table if not exists goennet_connection_requests (
   id                    uuid primary key default uuid_generate_v4(),
   requester_profile_id  uuid not null references goennet_members(id) on delete cascade,
-  receiver_profile_id   uuid not null references goennet_members(id) on delete cascade,
+  owner_profile_id      uuid not null references goennet_members(id) on delete cascade,
   status                text not null default 'pending'
     check (status in ('pending', 'accepted', 'rejected')),
   source_type           text not null default 'manual'
     check (source_type in ('qr', 'manual', 'invite')),
+  invite_token          text,
   message               text default '',
   created_at            timestamptz not null default now(),
+  updated_at            timestamptz not null default now(),
   responded_at          timestamptz,
-  constraint no_self_request check (requester_profile_id != receiver_profile_id)
+  constraint no_self_request check (requester_profile_id != owner_profile_id)
 );
 
-create index if not exists idx_goennet_conn_req_receiver on goennet_connection_requests(receiver_profile_id, status);
+create index if not exists idx_goennet_conn_req_owner on goennet_connection_requests(owner_profile_id, status);
 create index if not exists idx_goennet_conn_req_requester on goennet_connection_requests(requester_profile_id);
+
+-- ※ 旧スキーマ (receiver_profile_id) から移行する場合は以下を実行:
+-- alter table goennet_connection_requests rename column receiver_profile_id to owner_profile_id;
+-- alter table goennet_connection_requests add column if not exists invite_token text;
+-- alter table goennet_connection_requests add column if not exists updated_at timestamptz not null default now();
 
 -- ============================================================
 -- 3. goennet_direct_connections - 相互承認済みのつながり
@@ -177,4 +184,9 @@ $$;
 drop trigger if exists set_goennet_members_updated_at on goennet_members;
 create trigger set_goennet_members_updated_at
   before update on goennet_members
+  for each row execute function update_updated_at_column();
+
+drop trigger if exists set_goennet_conn_req_updated_at on goennet_connection_requests;
+create trigger set_goennet_conn_req_updated_at
+  before update on goennet_connection_requests
   for each row execute function update_updated_at_column();

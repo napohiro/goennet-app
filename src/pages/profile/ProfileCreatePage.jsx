@@ -19,7 +19,8 @@ export default function ProfileCreatePage() {
     try {
       await saveProfile(data)
       setSuccess(true)
-      setTimeout(() => navigate(redirect), 900)
+      const pendingToken = localStorage.getItem('pending_invite_token')
+      setTimeout(() => navigate(pendingToken ? `/invite/${pendingToken}` : redirect), 900)
     } catch (e) {
       setError(e.message)
     } finally {

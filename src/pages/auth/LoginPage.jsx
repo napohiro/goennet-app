@@ -55,7 +55,11 @@ export default function LoginPage() {
               variant="primary"
               fullWidth
               size="lg"
-              onClick={() => { devLogin(); navigate(redirect) }}
+              onClick={() => {
+                devLogin()
+                const pendingToken = localStorage.getItem('pending_invite_token')
+                navigate(pendingToken ? `/invite/${pendingToken}` : redirect)
+              }}
             >
               開発用ログイン
             </Button>
