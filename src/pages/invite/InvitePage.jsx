@@ -13,7 +13,7 @@ export default function InvitePage() {
   const { token } = useParams()
   const navigate = useNavigate()
   const { isAuthenticated } = useAuth()
-  const { profile: myProfile } = useMyProfile()
+  const { profile: myProfile, loading: profileLoading } = useMyProfile()
 
   const [invite, setInvite] = useState(null)
   const [mutual, setMutual] = useState(false)
@@ -49,8 +49,10 @@ export default function InvitePage() {
       navigate(`/auth/login?redirect=/invite/${token}`)
       return
     }
+    // プロフィールがまだ読み込み中の場合は何もしない（競合防止）
+    if (profileLoading) return
     if (!myProfile) {
-      navigate(`/profile/create`)
+      navigate(`/profile/create?redirect=/invite/${token}`)
       return
     }
     setSending(true)
@@ -163,7 +165,13 @@ export default function InvitePage() {
                 className="w-full rounded-xl border-stone-300 text-sm"
               />
             </div>
-            <Button variant="primary" fullWidth size="lg" onClick={handleRequest} loading={sending}>
+            <Button
+              variant="primary"
+              fullWidth
+              size="lg"
+              onClick={handleRequest}
+              loading={sending || (isAuthenticated && profileLoading)}
+            >
               {isAuthenticated ? 'つながり申請を送る' : 'ログインして申請する'}
             </Button>
           </div>

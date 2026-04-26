@@ -1,12 +1,16 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { getMyProfile } from '../../services/profileService'
 import LoadingSpinner from '../../components/common/LoadingSpinner'
 
 export default function AuthCallbackPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const [error, setError] = useState(null)
+
+  // Magic Link の emailRedirectTo に ?redirect=... を付与した場合に引き継ぐ
+  const redirectPath = searchParams.get('redirect') || ''
 
   useEffect(() => {
     async function handleCallback() {
@@ -17,9 +21,12 @@ export default function AuthCallbackPage() {
 
         const profile = await getMyProfile(session.user.id)
         if (profile) {
-          navigate('/profile/me', { replace: true })
+          navigate(redirectPath || '/profile/me', { replace: true })
         } else {
-          navigate('/profile/create', { replace: true })
+          const next = redirectPath
+            ? `/profile/create?redirect=${encodeURIComponent(redirectPath)}`
+            : '/profile/create'
+          navigate(next, { replace: true })
         }
       } catch (e) {
         setError(e.message)
@@ -27,7 +34,7 @@ export default function AuthCallbackPage() {
     }
 
     handleCallback()
-  }, [navigate])
+  }, [navigate, redirectPath])
 
   if (error) {
     return (

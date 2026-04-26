@@ -18,7 +18,7 @@ export default function LoginPage() {
 
   async function handleSubmit(e) {
     e.preventDefault()
-    const ok = await signInWithMagicLink(email)
+    const ok = await signInWithMagicLink(email, redirect)
     if (ok) setSent(true)
   }
 

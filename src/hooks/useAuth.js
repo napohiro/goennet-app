@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
-import { AUTH_OPTIONS } from '../lib/authConfig'
+import { AUTH_REDIRECT_URL } from '../lib/authConfig'
 import { useAuthContext } from '../context/AuthContext'
 
 export function useAuth() {
@@ -8,17 +8,21 @@ export function useAuth() {
   const [authLoading, setAuthLoading] = useState(false)
   const [authError, setAuthError] = useState(null)
 
-  async function signInWithMagicLink(email) {
+  // redirectPath を渡すと、Magic Link 経由で戻ってきた後にそのパスへ遷移する
+  async function signInWithMagicLink(email, redirectPath = '') {
     if (!isSupabaseConfigured) {
       setAuthError('ローカルモックモードのため、ログインは使用できません。.env を設定してください。')
       return false
     }
     setAuthLoading(true)
     setAuthError(null)
+    const emailRedirectTo = redirectPath
+      ? `${AUTH_REDIRECT_URL}?redirect=${encodeURIComponent(redirectPath)}`
+      : AUTH_REDIRECT_URL
     try {
       const { error } = await supabase.auth.signInWithOtp({
         email,
-        options: AUTH_OPTIONS,
+        options: { emailRedirectTo },
       })
       if (error) throw error
       return true

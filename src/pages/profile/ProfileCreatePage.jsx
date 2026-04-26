@@ -1,10 +1,12 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import ProfileForm from '../../components/profile/ProfileForm'
 import { useMyProfile } from '../../hooks/useProfile'
 
 export default function ProfileCreatePage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const redirect = searchParams.get('redirect') || '/profile/me'
   const { saveProfile } = useMyProfile()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -17,7 +19,7 @@ export default function ProfileCreatePage() {
     try {
       await saveProfile(data)
       setSuccess(true)
-      setTimeout(() => navigate('/profile/me'), 900)
+      setTimeout(() => navigate(redirect), 900)
     } catch (e) {
       setError(e.message)
     } finally {
