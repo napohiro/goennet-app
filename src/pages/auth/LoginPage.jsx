@@ -22,7 +22,8 @@ export default function LoginPage() {
   )
 
   if (isAuthenticated) {
-    navigate(redirect)
+    const pendingToken = localStorage.getItem('pending_invite_token')
+    navigate(pendingToken ? `/invite/${pendingToken}` : redirect, { replace: true })
     return null
   }
 
@@ -58,7 +59,13 @@ export default function LoginPage() {
               onClick={() => {
                 devLogin()
                 const pendingToken = localStorage.getItem('pending_invite_token')
-                navigate(pendingToken ? `/invite/${pendingToken}` : redirect)
+                console.log('[LoginPage] pending_invite_token before redirect:', pendingToken)
+                if (pendingToken) {
+                  console.log('[LoginPage] redirecting back to invite:', pendingToken)
+                  navigate(`/invite/${pendingToken}`, { replace: true })
+                } else {
+                  navigate('/profile/me', { replace: true })
+                }
               }}
             >
               開発用ログイン

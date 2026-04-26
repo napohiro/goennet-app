@@ -12,16 +12,11 @@ import ExternalLink from '../../components/common/ExternalLinkConfirm'
 export default function InvitePage() {
   const { token: urlToken } = useParams()
   const token = urlToken || localStorage.getItem('pending_invite_token') || ''
+  console.log('[InvitePage] url token:', urlToken)
+  console.log('[InvitePage] saved pending_invite_token:', localStorage.getItem('pending_invite_token'))
   const navigate = useNavigate()
   const { isAuthenticated } = useAuth()
   const { profile: myProfile, loading: profileLoading } = useMyProfile()
-
-  // 未ログイン時にトークンを保存しておく（ログイン後も引き継げるように）
-  useEffect(() => {
-    if (token && !isAuthenticated) {
-      localStorage.setItem('pending_invite_token', token)
-    }
-  }, [token, isAuthenticated])
 
   const [invite, setInvite] = useState(null)
   const [mutual, setMutual] = useState(false)
@@ -54,6 +49,7 @@ export default function InvitePage() {
 
   async function handleRequest() {
     if (!isAuthenticated) {
+      localStorage.setItem('pending_invite_token', token)
       navigate(`/auth/login?redirect=/invite/${token}`)
       return
     }
