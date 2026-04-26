@@ -26,8 +26,14 @@ export function AuthProvider({ children }) {
     return () => subscription.unsubscribe()
   }, [])
 
+  // 開発専用: Supabase Auth を使わずローカル状態だけでログイン扱いにする。
+  // 本番ビルドでは import.meta.env.DEV が false になりバンドルから除去される。
+  const devLogin = import.meta.env.DEV
+    ? () => setSession({ user: { id: 'dev-user-001', email: 'dev@goennet.local' } })
+    : undefined
+
   return (
-    <AuthContext.Provider value={{ session, user: session?.user ?? null, loading }}>
+    <AuthContext.Provider value={{ session, user: session?.user ?? null, loading, devLogin }}>
       {children}
     </AuthContext.Provider>
   )

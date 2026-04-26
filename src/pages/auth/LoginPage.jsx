@@ -6,7 +6,7 @@ import Button from '../../components/common/Button'
 export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [sent, setSent] = useState(false)
-  const { signInWithMagicLink, devSignIn, loading, authError, isAuthenticated } = useAuth()
+  const { signInWithMagicLink, devLogin, loading, authError, isAuthenticated } = useAuth()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const redirect = searchParams.get('redirect') || '/profile/me'
@@ -33,7 +33,27 @@ export default function LoginPage() {
           <p className="text-stone-500 text-sm mt-1">つながりに、履歴と意味を。</p>
         </div>
 
-        {sent ? (
+        {import.meta.env.DEV ? (
+          // 開発環境: Magic Link フォームを非表示にし、モックログインのみ表示
+          <div className="rounded-2xl border border-dashed border-amber-400 bg-amber-50 p-6">
+            <p className="text-xs font-bold text-amber-700 mb-1">🔧 開発環境モード</p>
+            <p className="text-xs text-amber-600 mb-4">
+              本番には表示されません。Magic Link は本番ビルドで使用してください。
+            </p>
+            <Button
+              type="button"
+              variant="primary"
+              fullWidth
+              size="lg"
+              onClick={() => { devLogin(); navigate(redirect) }}
+            >
+              開発用ログイン
+            </Button>
+            <p className="text-xs text-amber-600 mt-3 text-center">
+              ユーザー: テストユーザー (dev-user-001)
+            </p>
+          </div>
+        ) : sent ? (
           <div className="bg-goen-green-50 border border-goen-green-200 rounded-2xl p-6 text-center">
             <div className="text-4xl mb-3">📨</div>
             <h2 className="font-bold text-goen-green-800 text-lg mb-2">メールを送りました</h2>
@@ -86,29 +106,6 @@ export default function LoginPage() {
             <p className="text-xs text-stone-400 text-center mt-4">
               ご利用にはメールアドレスが必要です。<br />
               個人情報は適切に管理します。
-            </p>
-          </div>
-        )}
-
-        {import.meta.env.DEV && (
-          <div className="mt-4 rounded-2xl border border-dashed border-amber-400 bg-amber-50 p-4">
-            <p className="text-xs font-bold text-amber-700 mb-3">
-              🔧 開発環境のみ — 本番には表示されません
-            </p>
-            <Button
-              type="button"
-              variant="secondary"
-              fullWidth
-              loading={loading}
-              onClick={async () => {
-                const ok = await devSignIn()
-                if (ok) navigate(redirect)
-              }}
-            >
-              開発用テストログイン
-            </Button>
-            <p className="text-xs text-amber-600 mt-2 text-center">
-              {import.meta.env.VITE_DEV_EMAIL || 'dev@goennet.local'}
             </p>
           </div>
         )}

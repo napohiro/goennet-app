@@ -4,7 +4,7 @@ import { AUTH_REDIRECT_URL } from '../lib/authConfig'
 import { useAuthContext } from '../context/AuthContext'
 
 export function useAuth() {
-  const { session, user, loading } = useAuthContext()
+  const { session, user, loading, devLogin } = useAuthContext()
   const [authLoading, setAuthLoading] = useState(false)
   const [authError, setAuthError] = useState(null)
 
@@ -41,26 +41,6 @@ export function useAuth() {
     setAuthLoading(false)
   }
 
-  // 開発専用: import.meta.env.DEV のときのみ有効。本番ビルドでは dead code として除去される。
-  async function devSignIn() {
-    if (!import.meta.env.DEV || !isSupabaseConfigured) return false
-    setAuthLoading(true)
-    setAuthError(null)
-    try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: import.meta.env.VITE_DEV_EMAIL || 'dev@goennet.local',
-        password: import.meta.env.VITE_DEV_PASSWORD || 'devtest1234',
-      })
-      if (error) throw error
-      return true
-    } catch (e) {
-      setAuthError(`[DEV] ${e.message}`)
-      return false
-    } finally {
-      setAuthLoading(false)
-    }
-  }
-
   return {
     session,
     user,
@@ -69,6 +49,6 @@ export function useAuth() {
     signInWithMagicLink,
     signOut,
     isAuthenticated: !!session,
-    devSignIn: import.meta.env.DEV ? devSignIn : undefined,
+    devLogin,
   }
 }
