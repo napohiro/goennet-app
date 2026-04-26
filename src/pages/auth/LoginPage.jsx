@@ -6,7 +6,7 @@ import Button from '../../components/common/Button'
 export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [sent, setSent] = useState(false)
-  const { signInWithMagicLink, loading, authError, isAuthenticated } = useAuth()
+  const { signInWithMagicLink, devSignIn, loading, authError, isAuthenticated } = useAuth()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const redirect = searchParams.get('redirect') || '/profile/me'
@@ -86,6 +86,29 @@ export default function LoginPage() {
             <p className="text-xs text-stone-400 text-center mt-4">
               ご利用にはメールアドレスが必要です。<br />
               個人情報は適切に管理します。
+            </p>
+          </div>
+        )}
+
+        {import.meta.env.DEV && (
+          <div className="mt-4 rounded-2xl border border-dashed border-amber-400 bg-amber-50 p-4">
+            <p className="text-xs font-bold text-amber-700 mb-3">
+              🔧 開発環境のみ — 本番には表示されません
+            </p>
+            <Button
+              type="button"
+              variant="secondary"
+              fullWidth
+              loading={loading}
+              onClick={async () => {
+                const ok = await devSignIn()
+                if (ok) navigate(redirect)
+              }}
+            >
+              開発用テストログイン
+            </Button>
+            <p className="text-xs text-amber-600 mt-2 text-center">
+              {import.meta.env.VITE_DEV_EMAIL || 'dev@goennet.local'}
             </p>
           </div>
         )}
