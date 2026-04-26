@@ -14,7 +14,7 @@ import { contactVisibilityLabel, lineageVisibilityLabel, networkVisibilityLabel 
 
 export default function MyProfilePage() {
   const navigate = useNavigate()
-  const { profile, loading } = useMyProfile()
+  const { profile, loading, error } = useMyProfile()
   const { connections } = useDirectConnections(profile?.id)
   const [qrUrl, setQrUrl] = useState(null)
   const [showQR, setShowQR] = useState(false)
@@ -27,6 +27,17 @@ export default function MyProfilePage() {
   }, [profile?.id])
 
   if (loading) return <LoadingSpinner />
+
+  if (error) {
+    return (
+      <div className="max-w-lg mx-auto px-4 py-8">
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-red-700 text-sm">
+          <p className="font-bold mb-1">プロフィールの読み込みに失敗しました</p>
+          <p className="font-mono text-xs mt-1 break-all">{error}</p>
+        </div>
+      </div>
+    )
+  }
 
   if (!profile) {
     return (

@@ -29,7 +29,10 @@ export async function getMyProfile(authUserId) {
     .select('*')
     .eq('auth_user_id', authUserId)
     .maybeSingle()
-  if (error) throw error
+  if (error) {
+    console.error('[Goen Net] getMyProfile error:', error)
+    throw error
+  }
   return data
 }
 
@@ -60,10 +63,13 @@ export async function createProfile(authUserId, profileData) {
   console.log('[Goen Net] createProfile payload:', payload)
   const { data, error } = await supabase
     .from('goennet_members')
-    .insert(payload)
+    .upsert(payload, { onConflict: 'auth_user_id' })
     .select()
     .single()
-  if (error) throw error
+  if (error) {
+    console.error('[Goen Net] createProfile error:', error)
+    throw error
+  }
   return data
 }
 
@@ -76,7 +82,10 @@ export async function updateProfile(profileId, profileData) {
     .eq('id', profileId)
     .select()
     .single()
-  if (error) throw error
+  if (error) {
+    console.error('[Goen Net] updateProfile error:', error)
+    throw error
+  }
   return data
 }
 

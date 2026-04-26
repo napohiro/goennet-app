@@ -15,6 +15,7 @@ export function useMyProfile() {
       const data = await getMyProfile(user.id)
       setProfile(data)
     } catch (e) {
+      console.error('[Goen Net] fetchProfile error:', e)
       setError(e.message)
     } finally {
       setLoading(false)
@@ -26,14 +27,12 @@ export function useMyProfile() {
   async function saveProfile(profileData) {
     if (!user) throw new Error('ログインが必要です')
     if (profile) {
-      const updated = await updateProfile(profile.id, profileData)
-      setProfile(updated)
-      return updated
+      await updateProfile(profile.id, profileData)
     } else {
-      const created = await createProfile(user.id, profileData)
-      setProfile(created)
-      return created
+      await createProfile(user.id, profileData)
     }
+    // 保存後はSupabaseから再取得してstateを確実に同期する
+    await fetchProfile()
   }
 
   return { profile, loading, error, saveProfile, refetch: fetchProfile }
