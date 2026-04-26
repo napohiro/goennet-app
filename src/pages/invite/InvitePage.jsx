@@ -30,6 +30,8 @@ export default function InvitePage() {
   useEffect(() => {
     if (!token) return
     setLoading(true)
+    setNotFound(false)
+    console.log('[InvitePage] fetching invite for token:', token)
     getInviteByToken(token)
       .then(async (data) => {
         if (!data || !data.is_active) { setNotFound(true); return }
@@ -56,6 +58,7 @@ export default function InvitePage() {
     // プロフィールがまだ読み込み中の場合は何もしない（競合防止）
     if (profileLoading) return
     if (!myProfile) {
+      localStorage.setItem('pending_invite_token', token)
       navigate(`/profile/create?redirect=/invite/${token}`)
       return
     }
