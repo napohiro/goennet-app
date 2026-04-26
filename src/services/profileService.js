@@ -23,11 +23,18 @@ function sanitizeProfileData(data) {
   return payload
 }
 
-export async function getMyProfile(authUserId) {
+export async function getMyProfile() {
+  const { data: { user }, error: userError } = await supabase.auth.getUser()
+  if (userError) {
+    console.error('[Goen Net] getMyProfile getUser error:', userError)
+    throw userError
+  }
+  if (!user) throw new Error('未認証です')
+  console.log('[Goen Net] getMyProfile: auth_user_id =', user.id)
   const { data, error } = await supabase
     .from('goennet_members')
     .select('*')
-    .eq('auth_user_id', authUserId)
+    .eq('auth_user_id', user.id)
     .maybeSingle()
   if (error) {
     console.error('[Goen Net] getMyProfile error:', error)
@@ -58,9 +65,15 @@ export async function getProfileByHandle(handleName) {
   return data
 }
 
-export async function createProfile(authUserId, profileData) {
-  const payload = { auth_user_id: authUserId, ...sanitizeProfileData(profileData) }
-  console.log('[Goen Net] createProfile payload:', payload)
+export async function createProfile(profileData) {
+  const { data: { user }, error: userError } = await supabase.auth.getUser()
+  if (userError) {
+    console.error('[Goen Net] createProfile getUser error:', userError)
+    throw userError
+  }
+  if (!user) throw new Error('未認証です')
+  const payload = { auth_user_id: user.id, ...sanitizeProfileData(profileData) }
+  console.log('[Goen Net] createProfile: auth_user_id =', user.id)
   const { data, error } = await supabase
     .from('goennet_members')
     .upsert(payload, { onConflict: 'auth_user_id' })

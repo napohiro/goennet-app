@@ -10,10 +10,9 @@ export function useMyProfile() {
 
   const fetchProfile = useCallback(async () => {
     if (!user) { setLoading(false); return }
-    console.log('[Goen Net] fetchProfile: auth_user_id =', user.id)
     setLoading(true)
     try {
-      const data = await getMyProfile(user.id)
+      const data = await getMyProfile()
       setProfile(data)
     } catch (e) {
       console.error('[Goen Net] fetchProfile error:', e)
@@ -30,7 +29,7 @@ export function useMyProfile() {
     if (profile) {
       await updateProfile(profile.id, profileData)
     } else {
-      await createProfile(user.id, profileData)
+      await createProfile(profileData)
     }
     // 保存後はSupabaseから再取得してstateを確実に同期する
     await fetchProfile()

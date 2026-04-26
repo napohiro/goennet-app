@@ -6,20 +6,10 @@ import Button from '../../components/common/Button'
 export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [sent, setSent] = useState(false)
-  const { signInWithMagicLink, devLogin, loading, authError, isAuthenticated } = useAuth()
+  const { signInWithMagicLink, loading, authError, isAuthenticated } = useAuth()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const redirect = searchParams.get('redirect') || '/profile/me'
-
-  // DEV モード、または Vercel の VITE_ENABLE_TEST_LOGIN=true のとき有効
-  const isTestLoginEnabled = import.meta.env.DEV || import.meta.env.VITE_ENABLE_TEST_LOGIN === 'true'
-
-  // デバッグ用: ブラウザのコンソールで実際に埋め込まれた値を確認する
-  console.log(
-    '[Goen Net] VITE_ENABLE_TEST_LOGIN:', import.meta.env.VITE_ENABLE_TEST_LOGIN,
-    '| DEV:', import.meta.env.DEV,
-    '| isTestLoginEnabled:', isTestLoginEnabled
-  )
 
   if (isAuthenticated) {
     const pendingToken = localStorage.getItem('pending_invite_token')
@@ -44,37 +34,7 @@ export default function LoginPage() {
           <p className="text-stone-500 text-sm mt-1">つながりに、履歴と意味を。</p>
         </div>
 
-        {isTestLoginEnabled ? (
-          // DEV または VITE_ENABLE_TEST_LOGIN=true のとき: Magic Link フォームを非表示にしテストログインのみ表示
-          <div className="rounded-2xl border border-dashed border-amber-400 bg-amber-50 p-6">
-            <p className="text-xs font-bold text-amber-700 mb-1">🔧 テストログインモード</p>
-            <p className="text-xs text-amber-600 mb-4">
-              VITE_ENABLE_TEST_LOGIN=true が設定されています。Magic Link を使うには false に変更してください。
-            </p>
-            <Button
-              type="button"
-              variant="primary"
-              fullWidth
-              size="lg"
-              onClick={() => {
-                devLogin()
-                const pendingToken = localStorage.getItem('pending_invite_token')
-                console.log('[LoginPage] pending_invite_token before redirect:', pendingToken)
-                if (pendingToken) {
-                  console.log('[LoginPage] redirecting back to invite:', pendingToken)
-                  navigate(`/invite/${pendingToken}`, { replace: true })
-                } else {
-                  navigate('/profile/me', { replace: true })
-                }
-              }}
-            >
-              開発用ログイン
-            </Button>
-            <p className="text-xs text-amber-600 mt-3 text-center">
-              ユーザー: テストユーザー (dev-user-001)
-            </p>
-          </div>
-        ) : sent ? (
+        {sent ? (
           <div className="bg-goen-green-50 border border-goen-green-200 rounded-2xl p-6 text-center">
             <div className="text-4xl mb-3">📨</div>
             <h2 className="font-bold text-goen-green-800 text-lg mb-2">メールを送りました</h2>

@@ -4,7 +4,7 @@ import { AUTH_REDIRECT_URL } from '../lib/authConfig'
 import { useAuthContext } from '../context/AuthContext'
 
 export function useAuth() {
-  const { session, user, loading, devLogin } = useAuthContext()
+  const { session, user, loading } = useAuthContext()
   const [authLoading, setAuthLoading] = useState(false)
   const [authError, setAuthError] = useState(null)
 
@@ -49,6 +49,5 @@ export function useAuth() {
     signInWithMagicLink,
     signOut,
     isAuthenticated: !!session,
-    devLogin,
   }
 }
