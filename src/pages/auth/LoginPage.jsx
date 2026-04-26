@@ -11,6 +11,16 @@ export default function LoginPage() {
   const [searchParams] = useSearchParams()
   const redirect = searchParams.get('redirect') || '/profile/me'
 
+  // DEV モード、または Vercel の VITE_ENABLE_TEST_LOGIN=true のとき有効
+  const isTestLoginEnabled = import.meta.env.DEV || import.meta.env.VITE_ENABLE_TEST_LOGIN === 'true'
+
+  // デバッグ用: ブラウザのコンソールで実際に埋め込まれた値を確認する
+  console.log(
+    '[Goen Net] VITE_ENABLE_TEST_LOGIN:', import.meta.env.VITE_ENABLE_TEST_LOGIN,
+    '| DEV:', import.meta.env.DEV,
+    '| isTestLoginEnabled:', isTestLoginEnabled
+  )
+
   if (isAuthenticated) {
     navigate(redirect)
     return null
@@ -33,12 +43,12 @@ export default function LoginPage() {
           <p className="text-stone-500 text-sm mt-1">つながりに、履歴と意味を。</p>
         </div>
 
-        {import.meta.env.DEV ? (
-          // 開発環境: Magic Link フォームを非表示にし、モックログインのみ表示
+        {isTestLoginEnabled ? (
+          // DEV または VITE_ENABLE_TEST_LOGIN=true のとき: Magic Link フォームを非表示にしテストログインのみ表示
           <div className="rounded-2xl border border-dashed border-amber-400 bg-amber-50 p-6">
-            <p className="text-xs font-bold text-amber-700 mb-1">🔧 開発環境モード</p>
+            <p className="text-xs font-bold text-amber-700 mb-1">🔧 テストログインモード</p>
             <p className="text-xs text-amber-600 mb-4">
-              本番には表示されません。Magic Link は本番ビルドで使用してください。
+              VITE_ENABLE_TEST_LOGIN=true が設定されています。Magic Link を使うには false に変更してください。
             </p>
             <Button
               type="button"

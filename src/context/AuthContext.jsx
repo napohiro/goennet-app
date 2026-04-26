@@ -26,9 +26,9 @@ export function AuthProvider({ children }) {
     return () => subscription.unsubscribe()
   }, [])
 
-  // 開発専用: Supabase Auth を使わずローカル状態だけでログイン扱いにする。
-  // 本番ビルドでは import.meta.env.DEV が false になりバンドルから除去される。
-  const devLogin = import.meta.env.DEV
+  // DEV モード、または VITE_ENABLE_TEST_LOGIN=true のとき有効。Supabase Auth を使わずローカル状態でログイン扱い。
+  const isTestLoginEnabled = import.meta.env.DEV || import.meta.env.VITE_ENABLE_TEST_LOGIN === 'true'
+  const devLogin = isTestLoginEnabled
     ? () => setSession({ user: { id: 'dev-user-001', email: 'dev@goennet.local' } })
     : undefined
 
