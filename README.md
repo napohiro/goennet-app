@@ -214,12 +214,30 @@ goennet-app/
 | 連絡先は初期 `mutual_only` | プライバシー保護 |
 | QR → 申請 → 承認制 | 勝手につながりを作られないため |
 
+### ⚠️ テスト用の permissive ポリシーについて
+
+テスト期間中、`supabase/rls_dev_permissive.sql` を実行すると以下の一時ポリシーが有効になります。
+
+| ポリシー名 | 対象テーブル | 内容 |
+|---|---|---|
+| `goennet_members_dev_all` | `goennet_members` | 全操作を `using (true)` で許可 |
+| `goennet_qr_invites_dev_all` | `goennet_qr_invites` | 全操作を `using (true)` で許可 |
+| `goennet_direct_conn_dev_all` | `goennet_direct_connections` | 全操作を `using (true)` で許可 |
+| `goennet_conn_req_dev_all` | `goennet_connection_requests` | 全操作を `using (true)` で許可 |
+
+**これらは認証なし（anon）でも全データにアクセスできる状態です。**  
+**正式リリース前に必ず解除し、`auth.uid()` ベースのポリシーに戻してください。**
+
+解除は `rls_dev_permissive.sql` 末尾の「解除用 SQL」コメントを Supabase SQL Editor で実行します。
+
 ### 本番デプロイ前チェックリスト
 
+- [ ] **`supabase/rls_dev_permissive.sql` の解除用 SQL を実行**して `*_dev_all` ポリシーを全て DROP する（最重要）
+- [ ] Vercel の `VITE_ENABLE_TEST_LOGIN` を `false` に変更して Redeploy（Magic Link に戻す）
 - [ ] **Vercel ダッシュボード**の Environment Variables に `VITE_APP_URL=https://goennet-app.vercel.app` を設定（`.env.production` は Vercel に読まれない）
 - [ ] Supabase の Site URL を `https://goennet-app.vercel.app` に変更
 - [ ] Supabase の Redirect URLs に `https://goennet-app.vercel.app/auth/callback*`（末尾 `*` 必須）を追加
-- [ ] RLS が全テーブルで有効になっているか確認
+- [ ] RLS が全テーブルで有効になっているか確認（`*_dev_all` ポリシーが残っていないこと）
 - [ ] `supabase/rls_policies.sql` のコメントを読み本番向けに強化
 - [ ] `seed.sql` を本番で実行していないことを確認
 - [ ] Supabase のレート制限を設定

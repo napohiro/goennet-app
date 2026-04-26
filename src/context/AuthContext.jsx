@@ -29,7 +29,16 @@ export function AuthProvider({ children }) {
   // DEV モード、または VITE_ENABLE_TEST_LOGIN=true のとき有効。Supabase Auth を使わずローカル状態でログイン扱い。
   const isTestLoginEnabled = import.meta.env.DEV || import.meta.env.VITE_ENABLE_TEST_LOGIN === 'true'
   const devLogin = isTestLoginEnabled
-    ? () => setSession({ user: { id: 'dev-user-001', email: 'dev@goennet.local' } })
+    ? () => {
+        // localStorage に永続化した UUID を使う（セッションをまたいで同じ auth_user_id になる）
+        const LS_KEY = 'goennet_test_user_uuid'
+        let uuid = localStorage.getItem(LS_KEY)
+        if (!uuid) {
+          uuid = crypto.randomUUID()
+          localStorage.setItem(LS_KEY, uuid)
+        }
+        setSession({ user: { id: uuid, email: 'dev@goennet.local' } })
+      }
     : undefined
 
   return (
