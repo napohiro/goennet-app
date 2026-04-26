@@ -4,11 +4,37 @@ import { useConnectionRequests } from '../../hooks/useConnections'
 import ConnectionRequestCard from '../../components/connections/ConnectionRequestCard'
 import LoadingSpinner from '../../components/common/LoadingSpinner'
 import Badge from '../../components/common/Badge'
+import Button from '../../components/common/Button'
+import { getInviteByToken } from '../../services/qrService'
+import { sendConnectionRequest } from '../../services/connectionService'
 
 export default function ConnectionRequestsPage() {
   const { profile } = useMyProfile()
-  const { incoming, outgoing, loading, approve, reject } = useConnectionRequests(profile?.id)
+  const { incoming, outgoing, loading, approve, reject, refetch } = useConnectionRequests(profile?.id)
   const [tab, setTab] = useState('incoming')
+  const [pendingToken, setPendingToken] = useState(() => localStorage.getItem('pending_invite_token'))
+  const [reapplying, setReapplying] = useState(false)
+  const [reapplyError, setReapplyError] = useState(null)
+  const [reapplied, setReapplied] = useState(false)
+
+  async function handleReapply() {
+    if (!pendingToken || !profile) return
+    setReapplying(true)
+    setReapplyError(null)
+    try {
+      const invite = await getInviteByToken(pendingToken)
+      if (!invite?.owner) throw new Error('QR情報が見つかりません')
+      await sendConnectionRequest(profile.id, invite.owner.id, '', 'qr', pendingToken)
+      localStorage.removeItem('pending_invite_token')
+      setPendingToken(null)
+      setReapplied(true)
+      await refetch()
+    } catch (e) {
+      setReapplyError(e.message)
+    } finally {
+      setReapplying(false)
+    }
+  }
 
   if (loading) return <LoadingSpinner />
 
@@ -65,6 +91,23 @@ export default function ConnectionRequestsPage() {
 
       {tab === 'outgoing' && (
         <div className="space-y-3">
+          {reapplied ? (
+            <div className="bg-goen-green-50 border border-goen-green-200 rounded-2xl p-4 text-center">
+              <p className="text-goen-green-700 font-medium text-sm">申請を送りました。承認をお待ちください。</p>
+            </div>
+          ) : pendingToken ? (
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
+              <p className="text-xs font-bold text-amber-700 mb-2">前回のQRで再申請する</p>
+              {reapplyError && <p className="text-red-600 text-xs mb-2">{reapplyError}</p>}
+              <Button variant="primary" fullWidth size="sm" onClick={handleReapply} loading={reapplying}>
+                再申請する
+              </Button>
+            </div>
+          ) : (
+            <div className="bg-stone-50 border border-stone-200 rounded-2xl p-4 text-center">
+              <p className="text-stone-500 text-xs">再申請できるQR情報がありません。もう一度QRを読み取ってください。</p>
+            </div>
+          )}
           {outgoing.length === 0 ? (
             <div className="text-center py-12">
               <div className="text-4xl mb-3">📤</div>

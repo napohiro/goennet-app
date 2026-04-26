@@ -35,6 +35,7 @@ export default function InvitePage() {
     getInviteByToken(token)
       .then(async (data) => {
         if (!data || data.is_active === false) { setNotFound(true); return }
+        localStorage.setItem('pending_invite_token', token)
         setInvite(data)
         if (myProfile && data.owner) {
           const [m, p] = await Promise.all([
