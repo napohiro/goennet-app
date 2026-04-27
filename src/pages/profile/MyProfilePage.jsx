@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { useMyProfile } from '../../hooks/useProfile'
 import { useDirectConnections } from '../../hooks/useConnections'
 import { getOrCreateInviteToken, getInviteUrl } from '../../services/qrService'
+import { deleteMyProfile } from '../../services/profileService'
+import { supabase } from '../../lib/supabase'
 import QRDisplay from '../../components/qr/QRDisplay'
 import ProfileCard from '../../components/profile/ProfileCard'
 import Badge from '../../components/common/Badge'
@@ -18,6 +20,9 @@ export default function MyProfilePage() {
   const { connections } = useDirectConnections(profile?.id)
   const [qrUrl, setQrUrl] = useState(null)
   const [showQR, setShowQR] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleteLoading, setDeleteLoading] = useState(false)
+  const [deleteError, setDeleteError] = useState(null)
 
   useEffect(() => {
     if (!profile) return
@@ -169,10 +174,68 @@ export default function MyProfilePage() {
         </Button>
       </div>
 
+      <div className="mt-10 pt-6 border-t border-red-100">
+        <p className="text-xs text-stone-400 mb-3 text-center">退会・データ削除</p>
+        <Button
+          variant="danger"
+          fullWidth
+          onClick={() => { setDeleteError(null); setShowDeleteConfirm(true) }}
+        >
+          退会・プロフィール削除
+        </Button>
+      </div>
+
       <Modal isOpen={showQR} onClose={() => setShowQR(false)} title="マイQRコード">
         {qrUrl && (
           <QRDisplay url={qrUrl} profileName={profile.display_name} />
         )}
+      </Modal>
+
+      <Modal isOpen={showDeleteConfirm} onClose={() => !deleteLoading && setShowDeleteConfirm(false)} title="退会の確認">
+        <div className="space-y-4">
+          <p className="text-stone-700 text-sm leading-relaxed">
+            退会するとプロフィールとつながり情報が非表示になります。<br />
+            本当に退会しますか？
+          </p>
+          {deleteError && (
+            <div className="bg-red-50 border border-red-200 rounded-xl p-3">
+              <p className="text-red-700 text-xs font-medium">退会処理に失敗しました</p>
+              <p className="text-red-600 text-xs mt-0.5 font-mono break-all">{deleteError}</p>
+            </div>
+          )}
+          <div className="flex gap-3">
+            <Button
+              variant="secondary"
+              fullWidth
+              disabled={deleteLoading}
+              onClick={() => setShowDeleteConfirm(false)}
+            >
+              キャンセル
+            </Button>
+            <Button
+              variant="danger"
+              fullWidth
+              loading={deleteLoading}
+              onClick={async () => {
+                setDeleteLoading(true)
+                setDeleteError(null)
+                try {
+                  await deleteMyProfile()
+                  setShowDeleteConfirm(false)
+                  await supabase.auth.signOut()
+                  navigate('/auth/login', { replace: true, state: { message: '退会処理が完了しました' } })
+                } catch (e) {
+                  console.error('[Goen Net] deleteMyProfile failed:', e)
+                  setDeleteError(e.message)
+                } finally {
+                  setDeleteLoading(false)
+                }
+              }}
+            >
+              退会する
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   )

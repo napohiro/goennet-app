@@ -30,11 +30,14 @@ export async function getMyProfile() {
     throw userError
   }
   if (!user) throw new Error('未認証です')
-  console.log('[Goen Net] getMyProfile: auth_user_id =', user.id)
+  console.log('[Goen Net] getMyProfile: 検索する auth_user_id =', user.id)
   const { data, error } = await supabase
     .from('goennet_members')
     .select('*')
     .eq('auth_user_id', user.id)
+    .eq('is_deleted', false)
+    .order('created_at', { ascending: false })
+    .limit(1)
     .maybeSingle()
   if (error) {
     console.error('[Goen Net] getMyProfile error:', error)
@@ -49,6 +52,7 @@ export async function getProfileById(profileId) {
     .select('id, display_name, handle_name, avatar_url, catch_copy, how_i_can_help, useful_for, what_we_can_do, offer_tags, website_url, youtube_url, instagram_url, contact_visibility, lineage_visibility, network_visibility, is_public, created_at')
     .eq('id', profileId)
     .eq('is_public', true)
+    .eq('is_deleted', false)
     .maybeSingle()
   if (error) throw error
   return data
@@ -60,6 +64,7 @@ export async function getProfileByHandle(handleName) {
     .select('id, display_name, handle_name, avatar_url, catch_copy, how_i_can_help, useful_for, what_we_can_do, offer_tags, website_url, youtube_url, instagram_url, contact_visibility, lineage_visibility, network_visibility, is_public')
     .eq('handle_name', handleName)
     .eq('is_public', true)
+    .eq('is_deleted', false)
     .maybeSingle()
   if (error) throw error
   return data
@@ -110,4 +115,55 @@ export async function getContactInfo(profileId) {
     .maybeSingle()
   if (error) throw error
   return data
+}
+
+export async function deleteMyProfile() {
+  const { data: { user }, error: userError } = await supabase.auth.getUser()
+  if (userError) throw userError
+  if (!user) throw new Error('未認証です')
+
+  const { data: profile, error: profileError } = await supabase
+    .from('goennet_members')
+    .select('id')
+    .eq('auth_user_id', user.id)
+    .eq('is_deleted', false)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  if (profileError) throw profileError
+  if (!profile) throw new Error('削除するプロフィールが見つかりません')
+
+  const pid = profile.id
+  console.log('[Goen Net] deleteMyProfile: soft delete start, profile.id =', pid)
+
+  // つながりを無効化
+  await supabase
+    .from('goennet_direct_connections')
+    .update({ is_active: false })
+    .or(`profile_a_id.eq.${pid},profile_b_id.eq.${pid}`)
+
+  // ご縁履歴を無効化
+  await supabase
+    .from('goennet_connection_lineage')
+    .update({ is_active: false })
+    .or(`root_profile_id.eq.${pid},target_profile_id.eq.${pid}`)
+
+  // 保留中の申請をキャンセル
+  await supabase
+    .from('goennet_connection_requests')
+    .update({ status: 'cancelled', responded_at: new Date().toISOString() })
+    .or(`requester_profile_id.eq.${pid},owner_profile_id.eq.${pid}`)
+    .eq('status', 'pending')
+
+  // プロフィールを soft delete
+  const { error: deleteError } = await supabase
+    .from('goennet_members')
+    .update({ is_deleted: true, deleted_at: new Date().toISOString() })
+    .eq('id', pid)
+  if (deleteError) {
+    console.error('[Goen Net] deleteMyProfile error:', deleteError)
+    throw deleteError
+  }
+
+  console.log('[Goen Net] deleteMyProfile: done, profile.id =', pid)
 }

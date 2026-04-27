@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import Button from '../../components/common/Button'
 
@@ -8,8 +8,10 @@ export default function LoginPage() {
   const [sent, setSent] = useState(false)
   const { signInWithMagicLink, loading, authError, isAuthenticated } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const [searchParams] = useSearchParams()
   const redirect = searchParams.get('redirect') || '/profile/me'
+  const successMessage = location.state?.message ?? null
 
   if (isAuthenticated) {
     const pendingToken = localStorage.getItem('pending_invite_token')
@@ -26,6 +28,12 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-goen-warm flex flex-col items-center justify-center px-5">
       <div className="w-full max-w-sm">
+        {successMessage && (
+          <div className="bg-stone-100 border border-stone-200 rounded-xl p-3 mb-6 text-center text-stone-600 text-sm">
+            {successMessage}
+          </div>
+        )}
+
         <div className="text-center mb-8">
           <div className="w-16 h-16 rounded-full bg-goen-green-700 flex items-center justify-center text-white font-bold text-2xl mx-auto mb-4">
             縁

@@ -19,7 +19,8 @@ export default function AuthCallbackPage() {
         if (sessionError) throw sessionError
         if (!session) throw new Error('セッションが見つかりません。ログインリンクをもう一度お試しください。')
 
-        const profile = await getMyProfile(session.user.id)
+        console.log('[Goen Net] AuthCallback: session.user.id =', session.user.id)
+        const profile = await getMyProfile()
         const pendingToken = localStorage.getItem('pending_invite_token')
         const inviteDest = pendingToken ? `/invite/${pendingToken}` : null
         if (profile) {
