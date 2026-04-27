@@ -77,8 +77,13 @@ export async function createProfile(profileData) {
     throw userError
   }
   if (!user) throw new Error('未認証です')
-  const payload = { auth_user_id: user.id, ...sanitizeProfileData(profileData) }
-  console.log('[Goen Net] createProfile: auth_user_id =', user.id)
+  const payload = {
+    auth_user_id: user.id,
+    ...sanitizeProfileData(profileData),
+    is_deleted: false,
+    deleted_at: null,
+  }
+  console.log('[Goen Net] createProfile: auth_user_id =', user.id, 'payload =', payload)
   const { data, error } = await supabase
     .from('goennet_members')
     .upsert(payload, { onConflict: 'auth_user_id' })
@@ -86,6 +91,7 @@ export async function createProfile(profileData) {
     .single()
   if (error) {
     console.error('[Goen Net] createProfile error:', error)
+    console.log('[Goen Net] createProfile error detail:', JSON.stringify(error, null, 2))
     throw error
   }
   return data
