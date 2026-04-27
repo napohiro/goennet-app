@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
-import { AUTH_REDIRECT_URL } from '../lib/authConfig'
 import { useAuthContext } from '../context/AuthContext'
 
 export function useAuth() {
@@ -8,22 +7,34 @@ export function useAuth() {
   const [authLoading, setAuthLoading] = useState(false)
   const [authError, setAuthError] = useState(null)
 
-  // redirectPath を渡すと、Magic Link 経由で戻ってきた後にそのパスへ遷移する
-  async function signInWithMagicLink(email, redirectPath = '') {
+  async function signIn(email, password) {
     if (!isSupabaseConfigured) {
       setAuthError('ローカルモックモードのため、ログインは使用できません。.env を設定してください。')
       return false
     }
     setAuthLoading(true)
     setAuthError(null)
-    const emailRedirectTo = redirectPath
-      ? `${AUTH_REDIRECT_URL}?redirect=${encodeURIComponent(redirectPath)}`
-      : AUTH_REDIRECT_URL
     try {
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: { emailRedirectTo },
-      })
+      const { error } = await supabase.auth.signInWithPassword({ email, password })
+      if (error) throw error
+      return true
+    } catch (e) {
+      setAuthError(e.message)
+      return false
+    } finally {
+      setAuthLoading(false)
+    }
+  }
+
+  async function signUp(email, password) {
+    if (!isSupabaseConfigured) {
+      setAuthError('ローカルモックモードのため、登録は使用できません。.env を設定してください。')
+      return false
+    }
+    setAuthLoading(true)
+    setAuthError(null)
+    try {
+      const { error } = await supabase.auth.signUp({ email, password })
       if (error) throw error
       return true
     } catch (e) {
@@ -46,7 +57,8 @@ export function useAuth() {
     user,
     loading: loading || authLoading,
     authError,
-    signInWithMagicLink,
+    signIn,
+    signUp,
     signOut,
     isAuthenticated: !!session,
   }

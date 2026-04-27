@@ -9,7 +9,7 @@ export default function AuthCallbackPage() {
   const [searchParams] = useSearchParams()
   const [error, setError] = useState(null)
 
-  // Magic Link の emailRedirectTo に ?redirect=... を付与した場合に引き継ぐ
+  // メール確認リンクや外部リダイレクト後の戻り先を引き継ぐ
   const redirectPath = searchParams.get('redirect') || ''
 
   useEffect(() => {
@@ -17,7 +17,7 @@ export default function AuthCallbackPage() {
       try {
         const { data: { session }, error: sessionError } = await supabase.auth.getSession()
         if (sessionError) throw sessionError
-        if (!session) throw new Error('セッションが見つかりません。ログインリンクをもう一度お試しください。')
+        if (!session) throw new Error('セッションが見つかりません。再度ログインしてください。')
 
         console.log('[Goen Net] AuthCallback: session.user.id =', session.user.id)
         const profile = await getMyProfile()
